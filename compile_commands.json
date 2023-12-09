@@ -1,0 +1,11 @@
+[
+{
+  "directory": "/home/yangsiyu/Workspace/CameraCapture",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-fPIC", "-Isrc/backends/v4l2", "-I/usr/include/opencv4", "-o", "build/.objs/CameraCapture/linux/x86_64/release/src/backends/v4l2/CameraV4l2.cpp.o", "src/backends/v4l2/CameraV4l2.cpp"],
+  "file": "src/backends/v4l2/CameraV4l2.cpp"
+},
+{
+  "directory": "/home/yangsiyu/Workspace/CameraCapture",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-o", "build/.objs/CameraCaptureTest/linux/x86_64/release/test/src/main.cpp.o", "test/src/main.cpp"],
+  "file": "test/src/main.cpp"
+}]

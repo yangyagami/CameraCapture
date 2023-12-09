@@ -1,0 +1,15 @@
+{
+    cmdlines = {
+        "xmake lua /usr/share/xmake/modules/private/utils/statistics.lua",
+        "xmake project -k compile_commands --lsp=clangd",
+        "xmake ",
+        "xmake lua /usr/share/xmake/actions/build/cleaner.lua",
+        "xmake ",
+        "xmake ",
+        "xmake run",
+        "xmake -b CameraCapture",
+        "xmake -b CameraCaptureTets",
+        "xmake -b CameraCaptureTest",
+        "xmake -b CameraCaptureTest"
+    }
+}
