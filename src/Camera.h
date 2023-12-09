@@ -10,7 +10,8 @@
     code \
     auto diff = clock() - start; \
     char info[512] = { 0 }; \
-    sprintf(info, "elapsed time: %0.6f sec.", (double)diff / CLOCKS_PER_SEC); \
+    auto elapsedSec = (double)diff / CLOCKS_PER_SEC; \
+    sprintf(info, "elapsed time: %0.6f sec, FPS: %0.2f.", elapsedSec, 1.0f / elapsedSec); \
     CAMERA_LOG_INFO(info); \
 }
 #else

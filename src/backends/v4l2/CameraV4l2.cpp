@@ -121,11 +121,32 @@ CameraV4l2::~CameraV4l2() {
 }
 
 bool CameraV4l2::ioControl(int request, void *output) {
-    int ret = ioctl(mCameraDev, request, output);
-    if (ret < 0) {
-        CAMERA_LOG_ERROR(strerror(errno));
-        return false;
-    }
+    struct timeval tv;
+    int selectStatus = -1;
+    do {
+        tv.tv_sec = 5;
+        tv.tv_usec = 0;
+        fd_set fdset;
+        FD_ZERO(&fdset);
+        FD_SET(mCameraDev, &fdset);
+        selectStatus = select(mCameraDev + 1, &fdset, nullptr, nullptr, &tv);
+        if (selectStatus > 0) {
+            int ret = ioctl(mCameraDev, request, output);
+            if (ret < 0) {
+                CAMERA_LOG_ERROR(strerror(errno));
+                return false;
+            } else {
+                break;
+            }
+        } else {
+            if (selectStatus == 0) {
+                CAMERA_LOG_ERROR("Timeout!");
+            } else {
+                CAMERA_LOG_ERROR(strerror(errno));
+            }
+            return false;
+        }
+    } while (0 < selectStatus);
     return true;
 }
 
