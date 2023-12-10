@@ -46,3 +46,27 @@ int main() {
     return 0;
 }
 ```
+# Log Info
+Build with debug or check mode would enable log.
+```bash
+# or -m check
+xmake f -m debug && xmake
+xmake run
+```
+Output:
+```bash
+INFO: Open camera success: /dev/video0. -> (src/backends/v4l2/CameraV4l2.cpp:37:open)
+INFO: Driver name: Droidcam
+Card name: Droidcam
+Bus info: platform:v4l2loopback_dc-000
+Version: 393526
+ -> (src/backends/v4l2/CameraV4l2.cpp:233:queryInfo)
+INFO: Format: Y U 1 2
+Format dexcription: Planar YUV 4:2:0
+ -> (src/backends/v4l2/CameraV4l2.cpp:253:queryInfo)
+INFO: width: 640
+height: 480
+ -> (src/backends/v4l2/CameraV4l2.cpp:313:getformat)
+ERROR: Cannot open camera device: /dev/video1. -> (src/backends/v4l2/CameraV4l2.cpp:32:open)
+error: execv(/home/yangsiyu/Workspace/CameraCapture/build/linux/x86_64/check/CameraCaptureTest ) failed(255)
+```
