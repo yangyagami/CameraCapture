@@ -25,7 +25,21 @@
 
 class Camera {
 public:
-    virtual bool open(int index) = 0;
+    enum ImgFormat {
+        NONE,
+        MJPEG,
+        YUV420P,
+    };
+    struct Format {
+        ImgFormat imgFormat;
+        int width;
+        int height;
+        int fps;
+
+        Format() : imgFormat(ImgFormat::NONE), width(0), height(0), fps(0) {}
+    } mFormat;
+public:
+    virtual bool open(int index, const Format &format = Format()) = 0;
     virtual bool read(cv::Mat &frame) = 0;
     virtual bool close() = 0;
 };

@@ -22,7 +22,7 @@ CameraV4l2::CameraV4l2() : mCameraDev(-1) {
     std::fill(mMapSizes.begin(), mMapSizes.end(), 0);
 }
 
-bool CameraV4l2::open(int index) {
+bool CameraV4l2::open(int index, const Format &format) {
     char path[512] = { 0 };
     sprintf(path, "/dev/video%d", index);
     mCameraDev = ::open(path, O_RDWR | O_NONBLOCK);
@@ -35,6 +35,8 @@ bool CameraV4l2::open(int index) {
     char info[512] = { 0 };
     sprintf(info, "Open camera success: %s.", path);
     CAMERA_LOG_INFO(info);
+
+    mFormat = format;
 
     // get information
     if (queryInfo() == false) {
@@ -84,10 +86,16 @@ bool CameraV4l2::read(cv::Mat &frame) {
             return false;
         }
 
-        // handle data
-        // TODO
-        cv::Mat yuv420p(480 * 3 / 2, 640, CV_8UC1, (void *)mMapBuffers[buffer.index]);
-        cv::cvtColor(yuv420p, frame, cv::COLOR_YUV420p2RGB);
+        switch (mFormat.imgFormat) {
+        case ImgFormat::YUV420P: 
+        {
+            cv::Mat yuv420p(480 * 3 / 2, 640, CV_8UC1, (void *)mMapBuffers[buffer.index]);
+            cv::cvtColor(yuv420p, frame, cv::COLOR_YUV420p2RGB);
+        }
+        break;
+        case ImgFormat::MJPEG:
+        break;
+        }
 
         if (ioControl(VIDIOC_QBUF, &buffer) == false) {
             CAMERA_LOG_ERROR("Cannot enqueue buffer!");
@@ -155,42 +163,46 @@ bool CameraV4l2::ioControl(int request, void *output) {
     return true;
 }
 
-//bool CameraV4l2::ioControl(int request, void *output) {
-//    struct timeval tv;
-//    int selectStatus = -1;
-//    tv.tv_sec = 2;
-//    tv.tv_usec = 0;
-//    fd_set fdset;
-//    FD_ZERO(&fdset);
-//    FD_SET(mCameraDev, &fdset);
-//    do {
-//        selectStatus = select(mCameraDev + 1, &fdset, nullptr, nullptr, &tv);
-//        if (selectStatus > 0) {
-//            int ret = ioctl(mCameraDev, request, output);
-//            if (ret < 0) {
-//                CAMERA_LOG_ERROR(strerror(errno));
-//                return false;
-//            } else {
-//                break;
-//            }
-//        } else {
-//            if (selectStatus == 0) {
-//                CAMERA_LOG_ERROR("Timeout!");
-//            } else {
-//                CAMERA_LOG_ERROR(strerror(errno));
-//            }
-//            return false;
-//        }
-//    } while (0 < selectStatus);
-//    return true;
-//}
-
 bool CameraV4l2::setformat() {
+    // get default format
     struct v4l2_format fmt;
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = 640;
-    fmt.fmt.pix.height = 480;
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
+    if (ioControl(VIDIOC_G_FMT, &fmt) == false) {
+        CAMERA_LOG_ERROR("Query cap fmt failed!");
+        return false;
+    }
+
+    if (mFormat.imgFormat == ImgFormat::NONE) {
+        switch (fmt.fmt.pix.pixelformat) {
+        case V4L2_PIX_FMT_MJPEG:
+            mFormat.imgFormat = ImgFormat::MJPEG;
+        break;
+        case V4L2_PIX_FMT_YUV420:
+            mFormat.imgFormat = ImgFormat::YUV420P;
+        break;
+        }
+    }
+    if (mFormat.width <= 0 || mFormat.height <= 0) {
+        mFormat.width = fmt.fmt.pix.width;
+        mFormat.height = fmt.fmt.pix.height;
+    }
+
+    // set format
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmt.fmt.pix.width = mFormat.width;
+    fmt.fmt.pix.height = mFormat.height;
+
+    switch (mFormat.imgFormat) {
+    case ImgFormat::MJPEG:
+        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+    break;
+    case ImgFormat::YUV420P:
+        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
+    break;
+    default:
+        CAMERA_LOG_WARN("No supported format!");
+    break;
+    } 
 
     if (ioControl(VIDIOC_S_FMT, &fmt) == false) {
         CAMERA_LOG_ERROR("Set format failed!");
@@ -299,6 +311,7 @@ bool CameraV4l2::getformat() {
         fmt.fmt.pix.height
     );
     CAMERA_LOG_INFO(fmtInfo);
+
     return true;
 }
 

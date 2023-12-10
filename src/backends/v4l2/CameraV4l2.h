@@ -2,10 +2,10 @@
 #define CAMERA_V4L2_H
 
 #include <array>
+#include <string>
 
 #include "opencv2/opencv.hpp"
 #include "Camera.h"
-
 
 class CameraV4l2 : public Camera {
 private:
@@ -22,7 +22,7 @@ private:
     bool requestBuffers();
 public:
     CameraV4l2();
-    virtual bool open(int index) override;
+    virtual bool open(int index, const Format &format = Format()) override;
     virtual bool read(cv::Mat &frame) override;
     virtual bool close() override;
     virtual ~CameraV4l2();
