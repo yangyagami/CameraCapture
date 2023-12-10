@@ -25,7 +25,7 @@ CameraV4l2::CameraV4l2() : mCameraDev(-1) {
 bool CameraV4l2::open(int index) {
     char path[512] = { 0 };
     sprintf(path, "/dev/video%d", index);
-    mCameraDev = ::open(path, O_RDWR);
+    mCameraDev = ::open(path, O_RDWR | O_NONBLOCK);
     if (mCameraDev < 0) {
         char errmsg[512] = { 0 };
         sprintf(errmsg, "Cannot open camera device: %s.", path);
@@ -121,34 +121,69 @@ CameraV4l2::~CameraV4l2() {
 }
 
 bool CameraV4l2::ioControl(int request, void *output) {
-    struct timeval tv;
-    int selectStatus = -1;
-    do {
-        tv.tv_sec = 5;
-        tv.tv_usec = 0;
-        fd_set fdset;
-        FD_ZERO(&fdset);
-        FD_SET(mCameraDev, &fdset);
-        selectStatus = select(mCameraDev + 1, &fdset, nullptr, nullptr, &tv);
-        if (selectStatus > 0) {
-            int ret = ioctl(mCameraDev, request, output);
-            if (ret < 0) {
-                CAMERA_LOG_ERROR(strerror(errno));
-                return false;
-            } else {
-                break;
-            }
-        } else {
-            if (selectStatus == 0) {
-                CAMERA_LOG_ERROR("Timeout!");
-            } else {
-                CAMERA_LOG_ERROR(strerror(errno));
-            }
+    int ret = -1;
+    ret = ioctl(mCameraDev, request, output);
+    if (ret < 0) {
+        if (errno != EINPROGRESS && errno != EAGAIN) {
+            CAMERA_LOG_ERROR(strerror(errno));
             return false;
+        } else {
+            fd_set fdset;
+            FD_ZERO(&fdset);
+            FD_SET(mCameraDev, &fdset);
+            struct timeval tv;
+            int selectStatus = -1;
+            tv.tv_sec = 2;
+            tv.tv_usec = 0;
+            selectStatus = select(mCameraDev + 1, &fdset, nullptr, nullptr, &tv);
+            if (selectStatus > 0) {
+                ret = ioctl(mCameraDev, request, output);
+                if (ret < 0) {
+                    CAMERA_LOG_ERROR(strerror(errno));
+                    return false;
+                }
+            } else {
+                if (selectStatus == 0) {
+                    CAMERA_LOG_ERROR("Timeout!");
+                } else {
+                    CAMERA_LOG_ERROR(strerror(errno));
+                }
+                return false;
+            }
         }
-    } while (0 < selectStatus);
+    }
     return true;
 }
+
+//bool CameraV4l2::ioControl(int request, void *output) {
+//    struct timeval tv;
+//    int selectStatus = -1;
+//    tv.tv_sec = 2;
+//    tv.tv_usec = 0;
+//    fd_set fdset;
+//    FD_ZERO(&fdset);
+//    FD_SET(mCameraDev, &fdset);
+//    do {
+//        selectStatus = select(mCameraDev + 1, &fdset, nullptr, nullptr, &tv);
+//        if (selectStatus > 0) {
+//            int ret = ioctl(mCameraDev, request, output);
+//            if (ret < 0) {
+//                CAMERA_LOG_ERROR(strerror(errno));
+//                return false;
+//            } else {
+//                break;
+//            }
+//        } else {
+//            if (selectStatus == 0) {
+//                CAMERA_LOG_ERROR("Timeout!");
+//            } else {
+//                CAMERA_LOG_ERROR(strerror(errno));
+//            }
+//            return false;
+//        }
+//    } while (0 < selectStatus);
+//    return true;
+//}
 
 bool CameraV4l2::setformat() {
     struct v4l2_format fmt;
