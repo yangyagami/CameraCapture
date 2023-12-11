@@ -40,36 +40,43 @@ bool CameraV4l2::open(int index, const Format &format) {
 
     // get information
     if (queryInfo() == false) {
-        ::close(mCameraDev);
-        mCameraDev = -1;
+        close();
         return false;
     }
 
     // set format
     if (setformat() == false) {
-        ::close(mCameraDev);
-        mCameraDev = -1;
+        close();
+        return false;
+    }
+
+    // set param 
+    if (setparam() == false) {
+        close();
         return false;
     }
 
     // set input
     if (setInput() == false) {
-        ::close(mCameraDev);
-        mCameraDev = -1;
+        close();
+        return false;
+    }
+
+    // get param
+    if (getparam() == false) {
+        close();
         return false;
     }
 
     // get format
     if (getformat() == false) {
-        ::close(mCameraDev);
-        mCameraDev = -1;
+        close();
         return false;
     }
 
     // request buffers
     if (requestBuffers() == false) {
-        ::close(mCameraDev);
-        mCameraDev = -1;
+        close();
         return false;
     }
 
@@ -89,11 +96,14 @@ bool CameraV4l2::read(cv::Mat &frame) {
         switch (mFormat.imgFormat) {
         case ImgFormat::YUV420P: 
         {
-            cv::Mat yuv420p(480 * 3 / 2, 640, CV_8UC1, (void *)mMapBuffers[buffer.index]);
+            cv::Mat yuv420p(mFormat.height * 3 / 2, mFormat.width, CV_8UC1, (void *)mMapBuffers[buffer.index]);
             cv::cvtColor(yuv420p, frame, cv::COLOR_YUV420p2RGB);
         }
         break;
         case ImgFormat::MJPEG:
+        {
+            frame = cv::imdecode(cv::Mat(1, buffer.bytesused, CV_8UC3, mMapBuffers[buffer.index]), cv::IMREAD_COLOR);
+        }
         break;
         case ImgFormat::NONE:
         break;
@@ -103,7 +113,7 @@ bool CameraV4l2::read(cv::Mat &frame) {
             CAMERA_LOG_ERROR("Cannot enqueue buffer!");
             return false;
         }
-    );
+    )
     return true;
 }
 
@@ -112,7 +122,6 @@ bool CameraV4l2::close() {
     if (mCameraDev >= 0 && ioControl(VIDIOC_STREAMOFF, &type) == false) {
         CAMERA_LOG_ERROR("Close stream failed!!!");
     }
-    // TODO
     for (int i = 0; i < 4; i++) {
         if (mMapBuffers[i] != nullptr) {
             munmap(mMapBuffers[i], mMapSizes[i]);
@@ -134,7 +143,7 @@ bool CameraV4l2::ioControl(int request, void *output) {
     int ret = -1;
     ret = ioctl(mCameraDev, request, output);
     if (ret < 0) {
-        if (errno != EINPROGRESS && errno != EAGAIN) {
+        if (errno != EINPROGRESS && errno != EAGAIN && errno != EBUSY) {
             CAMERA_LOG_ERROR(strerror(errno));
             return false;
         } else {
@@ -326,3 +335,49 @@ bool CameraV4l2::setInput() {
     return true;
 }
 
+bool CameraV4l2::setparam(){
+    //get param
+    struct v4l2_streamparm param;
+    param.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (ioControl(VIDIOC_G_PARM, &param) == false) {
+        CAMERA_LOG_ERROR("Get cap param failed!");
+        return false;
+    }
+
+    if (mFormat.fps == 0) {
+        mFormat.fps = param.parm.output.timeperframe.denominator;
+    }
+
+    // set param
+    param.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    param.parm.capture.timeperframe.denominator = mFormat.fps;
+    param.parm.capture.timeperframe.numerator = 1;
+    if (ioControl(VIDIOC_S_PARM, &param) == false) {
+        CAMERA_LOG_ERROR("Set cap param failed!");
+        return false;
+    }
+    return true;
+}
+
+bool CameraV4l2::getparam(){
+    struct v4l2_streamparm param;
+    param.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (ioControl(VIDIOC_G_PARM, &param) == false) {
+        CAMERA_LOG_ERROR("Get cap param failed!");
+        return false;
+    }
+    char info[512] = { 0 };
+    sprintf(
+        info, 
+        "Capture timeperframe numerator: %d\n"
+        "Capture timeperframe denominator: %d\n"
+        "Output timeperframe numerator: %d\n"
+        "Output timeperframe denominator: %d\n",
+        param.parm.capture.timeperframe.numerator,
+        param.parm.capture.timeperframe.denominator,
+        param.parm.output.timeperframe.numerator,
+        param.parm.output.timeperframe.denominator
+    );
+    CAMERA_LOG_INFO(info);
+    return true;
+}

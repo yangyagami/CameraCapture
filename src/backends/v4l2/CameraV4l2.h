@@ -15,6 +15,8 @@ private:
 private:
     bool ioControl(int request, void *output);
 private:
+    bool setparam();
+    bool getparam();
     bool setformat();
     bool getformat();
     bool setInput();
