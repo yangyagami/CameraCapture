@@ -8,9 +8,9 @@
 #define CAMERA_LOG_WARN(msg) std::clog << "\033[1;33mWARN\033[0m: " << msg << " -> (" << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << ")" << std::endl;
 #define CAMERA_LOG_ERROR(msg) std::cerr << "\033[1;31mERROR\033[0m: " << msg << " -> (" << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << ")" << std::endl;
 #define MESURE(code) { \
-    auto start = std::chrono::steady_clock::now(); \
+    auto start = std::chrono::steady_clock::now();\
     code \
-    auto end = std::chrono::steady_clock::now(); \
+    auto end = std::chrono::steady_clock::now();\
     char info[512] = { 0 }; \
     sprintf(info, "elapsed time: %ld ms.", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()); \
     CAMERA_LOG_INFO(info); \
