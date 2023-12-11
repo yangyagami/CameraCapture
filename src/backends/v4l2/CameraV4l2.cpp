@@ -27,12 +27,12 @@ bool CameraV4l2::open(int index, const Format &format) {
     sprintf(path, "/dev/video%d", index);
     mCameraDev = ::open(path, O_RDWR | O_NONBLOCK);
     if (mCameraDev < 0) {
-        char errmsg[512] = { 0 };
+        char errmsg[1024] = { 0 };
         sprintf(errmsg, "Cannot open camera device: %s.", path);
         CAMERA_LOG_ERROR(errmsg);
         return false;
     }
-    char info[512] = { 0 };
+    char info[1024] = { 0 };
     sprintf(info, "Open camera success: %s.", path);
     CAMERA_LOG_INFO(info);
 
@@ -94,6 +94,8 @@ bool CameraV4l2::read(cv::Mat &frame) {
         }
         break;
         case ImgFormat::MJPEG:
+        break;
+        case ImgFormat::NONE:
         break;
         }
 
@@ -270,7 +272,7 @@ bool CameraV4l2::requestBuffers() {
         return false;
     } 
 
-    for (int i = 0; i < requestbuffers.count; i++) {
+    for (__u32 i = 0; i < requestbuffers.count; i++) {
         struct v4l2_buffer buffer;
         buffer.index = i;
         buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;

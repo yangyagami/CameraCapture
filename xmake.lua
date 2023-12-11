@@ -15,8 +15,7 @@ target("CameraCapture")
     add_includedirs("src", { public = true } )
 
     add_links(
-        "opencv_core",
-        "opencv_highgui",
+        "opencv_world",
         { public = true }
     )
 

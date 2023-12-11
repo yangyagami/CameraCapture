@@ -10,7 +10,8 @@ xmake && xmake run
 #include "CameraCreator.hpp"
 
 int main() {
-    // Create a camera for now just support v4l2 backend.
+    // Create a camera. 
+    // For now just support v4l2 backend.
     auto camera = CameraCreator::create();     
     // Create Camera format.
     Camera::Format format;
